@@ -15,14 +15,22 @@
  */
 package org.springframework.samples.petclinic.vet;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.repository.Repository;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Collection;
 
 /**
  * Repository class for <code>Vet</code> domain objects All method names are compliant
@@ -42,7 +50,8 @@ public interface VetRepository extends Repository<Vet, Integer> {
 	 * @return a <code>Collection</code> of <code>Vet</code>s
 	 */
 	@Transactional(readOnly = true)
-	@Cacheable("vets")
+	@Cacheable(value = "vets", key = "'all'")
+	@Query("select distinct vet from Vet vet left join fetch vet.specialties order by vet.id")
 	Collection<Vet> findAll() throws DataAccessException;
 
 	/**
@@ -52,7 +61,22 @@ public interface VetRepository extends Repository<Vet, Integer> {
 	 * @throws DataAccessException
 	 */
 	@Transactional(readOnly = true)
-	@Cacheable("vets")
-	Page<Vet> findAll(Pageable pageable) throws DataAccessException;
+	@Cacheable(value = "vets", key = "'page:' + #pageable.toString()")
+	default Page<Vet> findAll(Pageable pageable) throws DataAccessException {
+		Page<Integer> vetIds = findVetIds(pageable);
+		if (vetIds.isEmpty()) {
+			return new PageImpl<>(Collections.emptyList(), pageable, vetIds.getTotalElements());
+		}
+		Map<Integer, Vet> vetsById = findAllWithSpecialtiesByIdIn(vetIds.getContent()).stream()
+			.collect(Collectors.toMap(Vet::getId, Function.identity()));
+		List<Vet> vets = vetIds.getContent().stream().map(vetsById::get).toList();
+		return new PageImpl<>(vets, pageable, vetIds.getTotalElements());
+	}
+
+	@Query(value = "select vet.id from Vet vet", countQuery = "select count(vet) from Vet vet")
+	Page<Integer> findVetIds(Pageable pageable) throws DataAccessException;
+
+	@Query("select distinct vet from Vet vet left join fetch vet.specialties where vet.id in :ids")
+	List<Vet> findAllWithSpecialtiesByIdIn(@Param("ids") Collection<Integer> ids) throws DataAccessException;
 
 }
