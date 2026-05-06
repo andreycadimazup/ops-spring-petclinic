@@ -80,8 +80,8 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Determina o ID do contexto (Issue ou PR)
           ISSUE_NUMBER="${{ github.event.issue.number }}"
@@ -107,5 +107,5 @@ jobs:
             echo "Using Codex (OpenAI)..."
             # OpenAI CLI é inerentemente não-interativo em chamadas de chat create
             # openai chat create -m gpt-4o -g user "Baseie-se nas skills em .agents/skills/ e execute: $PROMPT"
-            codex exec --enable use_legacy_landlock "Baseie-se nas skills em .agents/skills/ e execute: $PROMPT"
+            codex exec "Baseie-se nas skills em .agents/skills/ e execute: $PROMPT" --enable use_legacy_landlock --yolo
           fi
