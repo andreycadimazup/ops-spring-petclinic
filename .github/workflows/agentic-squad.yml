@@ -25,8 +25,8 @@ jobs:
     # Dispara se houver uma label de 'status:', um comentário, ou dispatch manual
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' && startsWith(github.event.label.name, 'status:')) ||
-      (github.event_name == 'pull_request' && startsWith(github.event.label.name, 'status:')) ||
+      contains(github.event.issue.labels.*.name, 'status:') || 
+      contains(github.event.pull_request.labels.*.name, 'status:') ||
       github.event_name == 'issue_comment'
     runs-on: ubuntu-latest
     permissions:
@@ -106,5 +106,5 @@ jobs:
             echo "Using Codex (OpenAI)..."
             # OpenAI CLI é inerentemente não-interativo em chamadas de chat create
             # openai chat create -m gpt-4o -g user "Baseie-se nas skills em .agents/skills/ e execute: $PROMPT"
-            codex exec "Baseie-se nas skills em .agents/skills/ e execute: $PROMPT"
+            codex exec --enable use_legacy_landlock "Baseie-se nas skills em .agents/skills/ e execute: $PROMPT"
           fi
