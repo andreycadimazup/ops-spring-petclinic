@@ -55,7 +55,7 @@ public class RestOwnerService {
 
 	@Transactional(readOnly = true)
 	public Owner findOwner(int ownerId) {
-		return findExistingOwner(ownerId);
+		return findExistingOwnerWithPetsAndVisits(ownerId);
 	}
 
 	@Transactional
@@ -69,7 +69,8 @@ public class RestOwnerService {
 	public Owner updateOwner(int ownerId, OwnerRequest request) {
 		Owner owner = findExistingOwner(ownerId);
 		applyOwnerRequest(owner, request);
-		return this.owners.save(owner);
+		this.owners.save(owner);
+		return findExistingOwnerWithPetsAndVisits(ownerId);
 	}
 
 	@Transactional(readOnly = true)
@@ -79,18 +80,18 @@ public class RestOwnerService {
 
 	@Transactional(readOnly = true)
 	public List<Pet> findPets(int ownerId) {
-		return findExistingOwner(ownerId).getPets();
+		return findExistingOwnerWithPetsAndVisits(ownerId).getPets();
 	}
 
 	@Transactional(readOnly = true)
 	public Pet findPet(int ownerId, int petId) {
-		Owner owner = findExistingOwner(ownerId);
+		Owner owner = findExistingOwnerWithPetsAndVisits(ownerId);
 		return findExistingPet(owner, petId);
 	}
 
 	@Transactional
 	public Pet createPet(int ownerId, PetRequest request) {
-		Owner owner = findExistingOwner(ownerId);
+		Owner owner = findExistingOwnerWithPetsAndTypes(ownerId);
 		PetType type = findExistingPetType(request.typeId());
 		assertPetNameAvailable(owner, request.name(), null);
 
@@ -103,7 +104,7 @@ public class RestOwnerService {
 
 	@Transactional
 	public Pet updatePet(int ownerId, int petId, PetRequest request) {
-		Owner owner = findExistingOwner(ownerId);
+		Owner owner = findExistingOwnerWithPetsAndVisits(ownerId);
 		Pet pet = findExistingPet(owner, petId);
 		PetType type = findExistingPetType(request.typeId());
 		assertPetNameAvailable(owner, request.name(), petId);
@@ -126,7 +127,7 @@ public class RestOwnerService {
 
 	@Transactional
 	public Visit createVisit(int ownerId, int petId, VisitRequest request) {
-		Owner owner = findExistingOwner(ownerId);
+		Owner owner = findExistingOwnerWithPetsAndVisits(ownerId);
 		Pet pet = findExistingPet(owner, petId);
 
 		Visit visit = new Visit();
@@ -145,6 +146,16 @@ public class RestOwnerService {
 
 	private Owner findExistingOwner(int ownerId) {
 		return this.owners.findById(ownerId)
+			.orElseThrow(() -> new ResourceNotFoundException("Owner " + ownerId + " was not found"));
+	}
+
+	private Owner findExistingOwnerWithPetsAndTypes(int ownerId) {
+		return this.owners.findWithPetsAndTypesById(ownerId)
+			.orElseThrow(() -> new ResourceNotFoundException("Owner " + ownerId + " was not found"));
+	}
+
+	private Owner findExistingOwnerWithPetsAndVisits(int ownerId) {
+		return this.owners.findWithPetsAndVisitsById(ownerId)
 			.orElseThrow(() -> new ResourceNotFoundException("Owner " + ownerId + " was not found"));
 	}
 

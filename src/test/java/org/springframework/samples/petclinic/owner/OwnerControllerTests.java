@@ -109,6 +109,7 @@ class OwnerControllerTests {
 		given(this.petTypes.findPetTypes()).willReturn(List.of(catType()));
 
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(george));
+		given(this.owners.findWithPetsAndVisitsById(TEST_OWNER_ID)).willReturn(Optional.of(george));
 		Visit visit = new Visit();
 		visit.setDate(LocalDate.now());
 		george.getPet("Max").getVisits().add(visit);

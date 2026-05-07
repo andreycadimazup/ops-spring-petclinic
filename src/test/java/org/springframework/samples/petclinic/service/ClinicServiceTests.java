@@ -24,6 +24,7 @@ import java.util.Optional;
 
 import jakarta.persistence.EntityManagerFactory;
 
+import org.hibernate.Hibernate;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.Test;
@@ -136,6 +137,48 @@ class ClinicServiceTests {
 	}
 
 	@Test
+	void shouldFindOwnerByIdWithoutInitializingPets() {
+		Optional<Owner> optionalOwner = this.owners.findById(1);
+		assertThat(optionalOwner).isPresent();
+		assertThat(Hibernate.isInitialized(optionalOwner.get().getPets())).isFalse();
+	}
+
+	@Test
+	void shouldFindOwnersWithPetsWithoutInitializingVisitsForMvcList() {
+		Statistics statistics = statistics();
+		statistics.clear();
+
+		Page<Owner> owners = this.owners.findByLastNameStartingWithWithPets("Davis", PageRequest.of(0, 5));
+		long statementsAfterFetch = statistics.getPrepareStatementCount();
+
+		assertThat(owners).hasSize(2);
+		owners.forEach((owner) -> {
+			assertThat(Hibernate.isInitialized(owner.getPets())).isTrue();
+			owner.getPets().forEach((pet) -> {
+				assertThat(pet.getName()).isNotBlank();
+				assertThat(Hibernate.isInitialized(pet.getVisits())).isFalse();
+			});
+		});
+		assertThat(statistics.getPrepareStatementCount()).isEqualTo(statementsAfterFetch);
+	}
+
+	@Test
+	void shouldFindOwnerDetailsWithoutAdditionalQueries() {
+		Statistics statistics = statistics();
+		statistics.clear();
+
+		Owner owner = this.owners.findWithPetsAndVisitsById(6).orElseThrow();
+		long statementsAfterFetch = statistics.getPrepareStatementCount();
+
+		assertThat(owner.getPets()).hasSize(2);
+		owner.getPets().forEach((pet) -> {
+			assertThat(pet.getType().getName()).isNotBlank();
+			assertThat(pet.getVisits()).allSatisfy((visit) -> assertThat(visit.getDate()).isNotNull());
+		});
+		assertThat(statistics.getPrepareStatementCount()).isEqualTo(statementsAfterFetch);
+	}
+
+	@Test
 	@Transactional
 	void shouldInsertOwner() {
 		Page<Owner> owners = this.owners.findByLastNameStartingWith("Schultz", pageable);
@@ -202,7 +245,7 @@ class ClinicServiceTests {
 
 		this.owners.save(owner6);
 
-		optionalOwner = this.owners.findById(6);
+		optionalOwner = this.owners.findWithPetsAndTypesById(6);
 		assertThat(optionalOwner).isPresent();
 		owner6 = optionalOwner.get();
 		assertThat(owner6.getPets()).hasSize(found + 1);
@@ -225,7 +268,7 @@ class ClinicServiceTests {
 		pet7.setName(newName);
 		this.owners.save(owner6);
 
-		optionalOwner = this.owners.findById(6);
+		optionalOwner = this.owners.findWithPetsAndTypesById(6);
 		assertThat(optionalOwner).isPresent();
 		owner6 = optionalOwner.get();
 		pet7 = owner6.getPet(7);
@@ -295,7 +338,7 @@ class ClinicServiceTests {
 	@Test
 	@Transactional
 	void shouldAddNewVisitForPet() {
-		Optional<Owner> optionalOwner = this.owners.findById(6);
+		Optional<Owner> optionalOwner = this.owners.findWithPetsAndVisitsById(6);
 		assertThat(optionalOwner).isPresent();
 		Owner owner6 = optionalOwner.get();
 
@@ -314,7 +357,7 @@ class ClinicServiceTests {
 
 	@Test
 	void shouldFindVisitsByPetId() {
-		Optional<Owner> optionalOwner = this.owners.findById(6);
+		Optional<Owner> optionalOwner = this.owners.findWithPetsAndVisitsById(6);
 		assertThat(optionalOwner).isPresent();
 		Owner owner6 = optionalOwner.get();
 
