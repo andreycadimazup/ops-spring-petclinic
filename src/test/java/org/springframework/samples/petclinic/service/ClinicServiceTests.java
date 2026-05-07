@@ -107,6 +107,24 @@ class ClinicServiceTests {
 	}
 
 	@Test
+	void shouldFindOwnersByCriteria() {
+		Page<Owner> owners = this.owners.findByCriteria("Davis", null, null, null, pageable);
+		assertThat(owners).hasSize(2);
+
+		owners = this.owners.findByCriteria("Davis", "Sun", "60855517", 6, pageable);
+		assertThat(owners).singleElement().satisfies(owner -> {
+			assertThat(owner.getFirstName()).isEqualTo("Betty");
+			assertThat(owner.getLastName()).isEqualTo("Davis");
+		});
+
+		owners = this.owners.findByCriteria(null, "Madison", null, 1, pageable);
+		assertThat(owners).extracting(Owner::getLastName).containsExactly("Franklin");
+
+		owners = this.owners.findByCriteria("Davis", "Madison", null, null, pageable);
+		assertThat(owners).isEmpty();
+	}
+
+	@Test
 	void shouldFindSingleOwnerWithPet() {
 		Optional<Owner> optionalOwner = this.owners.findById(1);
 		assertThat(optionalOwner).isPresent();

@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -40,10 +41,12 @@ import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -68,6 +71,16 @@ class OwnerControllerTests {
 	@MockitoBean
 	private OwnerRepository owners;
 
+	@MockitoBean
+	private PetTypeRepository petTypes;
+
+	private PetType catType() {
+		PetType cat = new PetType();
+		cat.setId(1);
+		cat.setName("cat");
+		return cat;
+	}
+
 	private Owner george() {
 		Owner george = new Owner();
 		george.setId(TEST_OWNER_ID);
@@ -91,8 +104,9 @@ class OwnerControllerTests {
 	void setup() {
 
 		Owner george = george();
-		given(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class)))
+		given(this.owners.findByCriteria(eq("Franklin"), isNull(), isNull(), isNull(), any(Pageable.class)))
 			.willReturn(new PageImpl<>(List.of(george)));
+		given(this.petTypes.findPetTypes()).willReturn(List.of(catType()));
 
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(george));
 		Visit visit = new Visit();
@@ -135,36 +149,93 @@ class OwnerControllerTests {
 	void initFindForm() throws Exception {
 		mockMvc.perform(get("/owners/find"))
 			.andExpect(status().isOk())
-			.andExpect(model().attributeExists("owner"))
+			.andExpect(model().attributeExists("ownerSearch"))
+			.andExpect(model().attributeExists("petTypes"))
 			.andExpect(view().name("owners/findOwners"));
 	}
 
 	@Test
 	void processFindFormSuccess() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
-		when(this.owners.findByLastNameStartingWith(anyString(), any(Pageable.class))).thenReturn(tasks);
-		mockMvc.perform(get("/owners?page=1")).andExpect(status().isOk()).andExpect(view().name("owners/ownersList"));
+		when(this.owners.findByCriteria(isNull(), isNull(), isNull(), isNull(), any(Pageable.class))).thenReturn(tasks);
+		mockMvc.perform(get("/owners?page=1"))
+			.andExpect(status().isOk())
+			.andExpect(model().attribute("totalItems", 2L))
+			.andExpect(view().name("owners/ownersList"));
 	}
 
 	@Test
 	void processFindFormByLastName() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george()));
-		when(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(tasks);
+		when(this.owners.findByCriteria(eq("Franklin"), isNull(), isNull(), isNull(), any(Pageable.class)))
+			.thenReturn(tasks);
 		mockMvc.perform(get("/owners?page=1").param("lastName", "Franklin"))
-			.andExpect(status().is3xxRedirection())
-			.andExpect(view().name("redirect:/owners/" + TEST_OWNER_ID));
+			.andExpect(status().isOk())
+			.andExpect(model().attribute("listOwners", hasItem(hasProperty("lastName", is("Franklin")))))
+			.andExpect(view().name("owners/ownersList"));
+	}
+
+	@Test
+	void processFindFormWithMultipleFilters() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george()));
+		when(this.owners.findByCriteria(eq("Franklin"), eq("Madison"), eq("608555"), eq(1), any(Pageable.class)))
+			.thenReturn(tasks);
+		mockMvc
+			.perform(get("/owners?page=1").param("lastName", " Franklin ")
+				.param("city", "Madison")
+				.param("telephone", "608555")
+				.param("petTypeId", "1"))
+			.andExpect(status().isOk())
+			.andExpect(model().attribute("hasActiveFilters", true))
+			.andExpect(view().name("owners/ownersList"));
+
+		verify(this.owners).findByCriteria(eq("Franklin"), eq("Madison"), eq("608555"), eq(1), any(Pageable.class));
+	}
+
+	@Test
+	void processFindFormWithBlankFieldsNormalizesFilters() throws Exception {
+		Page<Owner> tasks = new PageImpl<>(List.of(george()));
+		when(this.owners.findByCriteria(isNull(), isNull(), isNull(), isNull(), any(Pageable.class))).thenReturn(tasks);
+
+		mockMvc.perform(get("/owners?page=1").param("lastName", " ").param("city", "").param("telephone", " "))
+			.andExpect(status().isOk())
+			.andExpect(model().attribute("hasActiveFilters", false))
+			.andExpect(view().name("owners/ownersList"));
+
+		verify(this.owners).findByCriteria(isNull(), isNull(), isNull(), isNull(), any(Pageable.class));
 	}
 
 	@Test
 	void processFindFormNoOwnersFound() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of());
-		when(this.owners.findByLastNameStartingWith(eq("Unknown Surname"), any(Pageable.class))).thenReturn(tasks);
+		when(this.owners.findByCriteria(eq("Unknown Surname"), isNull(), isNull(), isNull(), any(Pageable.class)))
+			.thenReturn(tasks);
 		mockMvc.perform(get("/owners?page=1").param("lastName", "Unknown Surname"))
 			.andExpect(status().isOk())
-			.andExpect(model().attributeHasFieldErrors("owner", "lastName"))
-			.andExpect(model().attributeHasFieldErrorCode("owner", "lastName", "notFound"))
-			.andExpect(view().name("owners/findOwners"));
+			.andExpect(model().attribute("listOwners", hasSize(0)))
+			.andExpect(content().string(containsString("No owners found for the provided filters.")))
+			.andExpect(view().name("owners/ownersList"));
 
+	}
+
+	@Test
+	void processFindFormPaginationPreservesFilters() throws Exception {
+		Pageable firstPage = PageRequest.of(0, 5);
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), george(), george(), george(), george()), firstPage, 6);
+		when(this.owners.findByCriteria(eq("Franklin"), eq("Madison"), eq("608555"), eq(1), any(Pageable.class)))
+			.thenReturn(tasks);
+
+		mockMvc
+			.perform(get("/owners?page=1").param("lastName", "Franklin")
+				.param("city", "Madison")
+				.param("telephone", "608555")
+				.param("petTypeId", "1"))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("lastName=Franklin")))
+			.andExpect(content().string(containsString("city=Madison")))
+			.andExpect(content().string(containsString("telephone=608555")))
+			.andExpect(content().string(containsString("petTypeId=1")))
+			.andExpect(view().name("owners/ownersList"));
 	}
 
 	@Test
