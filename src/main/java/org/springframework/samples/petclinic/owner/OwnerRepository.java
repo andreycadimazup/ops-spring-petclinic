@@ -15,11 +15,22 @@
  */
 package org.springframework.samples.petclinic.owner;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Repository class for <code>Owner</code> domain objects. All method names are compliant
@@ -43,6 +54,37 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 	 * found)
 	 */
 	Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
+
+	default Page<Owner> findByLastNameStartingWithWithPets(String lastName, Pageable pageable) {
+		Page<Integer> ownerIds = findIdsByLastNameStartingWith(lastName, pageable);
+		if (ownerIds.isEmpty()) {
+			return Page.empty(pageable);
+		}
+
+		Map<Integer, Owner> ownersById = findAllWithPetsByIdIn(ownerIds.getContent()).stream()
+			.collect(Collectors.toMap(Owner::getId, Function.identity()));
+		List<Owner> owners = ownerIds.getContent().stream().map(ownersById::get).filter(Objects::nonNull).toList();
+
+		return new PageImpl<>(owners, pageable, ownerIds.getTotalElements());
+	}
+
+	@Query("select o.id from Owner o where o.lastName like concat(:lastName, '%')")
+	Page<Integer> findIdsByLastNameStartingWith(@Param("lastName") String lastName, Pageable pageable);
+
+	@EntityGraph(attributePaths = "pets")
+	@Query("select o from Owner o where o.id in :ids")
+	List<Owner> findAllWithPetsByIdIn(@Param("ids") Collection<Integer> ids);
+
+	@EntityGraph(attributePaths = { "pets", "pets.type" })
+	@Query("select o from Owner o where o.id = :id")
+	Optional<Owner> findWithPetsAndTypesById(@Param("id") Integer id);
+
+	@Transactional(readOnly = true)
+	default Optional<Owner> findWithPetsAndVisitsById(Integer id) {
+		Optional<Owner> owner = findWithPetsAndTypesById(id);
+		owner.ifPresent((it) -> it.getPets().forEach((pet) -> pet.getVisits().size()));
+		return owner;
+	}
 
 	/**
 	 * Retrieve an {@link Owner} from the data store by id.
