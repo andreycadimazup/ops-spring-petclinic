@@ -13,26 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.samples.petclinic.owner.rest;
+package org.springframework.samples.petclinic.owner.rest.responses;
 
 import java.util.List;
-import java.util.Map;
 
-class ApiValidationException extends RuntimeException {
-
-	private final Map<String, List<String>> errors;
-
-	ApiValidationException(String field, String message) {
-		this(Map.of(field, List.of(message)));
-	}
-
-	ApiValidationException(Map<String, List<String>> errors) {
-		super("Request validation failed");
-		this.errors = errors;
-	}
-
-	Map<String, List<String>> getErrors() {
-		return this.errors;
-	}
+public record PageResponse<T>(List<T> content, int page, int size, long totalElements, int totalPages) {
 
 }

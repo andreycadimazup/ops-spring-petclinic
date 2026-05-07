@@ -13,16 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.samples.petclinic.owner.rest;
+package org.springframework.samples.petclinic.owner.rest.exceptions;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Null;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import java.util.List;
+import java.util.Map;
 
-public record OwnerRequest(@Null Integer id, @NotBlank @Size(max = 30) String firstName,
-		@NotBlank @Size(max = 30) String lastName, @NotBlank @Size(max = 255) String address,
-		@NotBlank @Size(max = 80) String city, @NotBlank @Pattern(regexp = "\\d{10}") String telephone,
-		@Null Object pets) {
+public class ApiValidationException extends RuntimeException {
+
+	private final Map<String, List<String>> errors;
+
+	public ApiValidationException(String field, String message) {
+		this(Map.of(field, List.of(message)));
+	}
+
+	public ApiValidationException(Map<String, List<String>> errors) {
+		super("Request validation failed");
+		this.errors = errors;
+	}
+
+	public Map<String, List<String>> getErrors() {
+		return this.errors;
+	}
 
 }

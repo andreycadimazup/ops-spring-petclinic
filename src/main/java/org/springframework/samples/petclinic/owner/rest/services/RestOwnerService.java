@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.samples.petclinic.owner.rest;
+package org.springframework.samples.petclinic.owner.rest.services;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -27,11 +27,17 @@ import org.springframework.samples.petclinic.owner.Pet;
 import org.springframework.samples.petclinic.owner.PetType;
 import org.springframework.samples.petclinic.owner.PetTypeRepository;
 import org.springframework.samples.petclinic.owner.Visit;
+import org.springframework.samples.petclinic.owner.rest.exceptions.ApiValidationException;
+import org.springframework.samples.petclinic.owner.rest.exceptions.BusinessConflictException;
+import org.springframework.samples.petclinic.owner.rest.exceptions.ResourceNotFoundException;
+import org.springframework.samples.petclinic.owner.rest.requests.OwnerRequest;
+import org.springframework.samples.petclinic.owner.rest.requests.PetRequest;
+import org.springframework.samples.petclinic.owner.rest.requests.VisitRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-class RestOwnerService {
+public class RestOwnerService {
 
 	private final OwnerRepository owners;
 
@@ -43,47 +49,47 @@ class RestOwnerService {
 	}
 
 	@Transactional(readOnly = true)
-	Page<Owner> findOwners(String lastName, Pageable pageable) {
+	public Page<Owner> findOwners(String lastName, Pageable pageable) {
 		return this.owners.findByLastNameStartingWith(lastName == null ? "" : lastName, pageable);
 	}
 
 	@Transactional(readOnly = true)
-	Owner findOwner(int ownerId) {
+	public Owner findOwner(int ownerId) {
 		return findExistingOwner(ownerId);
 	}
 
 	@Transactional
-	Owner createOwner(OwnerRequest request) {
+	public Owner createOwner(OwnerRequest request) {
 		Owner owner = new Owner();
 		applyOwnerRequest(owner, request);
 		return this.owners.save(owner);
 	}
 
 	@Transactional
-	Owner updateOwner(int ownerId, OwnerRequest request) {
+	public Owner updateOwner(int ownerId, OwnerRequest request) {
 		Owner owner = findExistingOwner(ownerId);
 		applyOwnerRequest(owner, request);
 		return this.owners.save(owner);
 	}
 
 	@Transactional(readOnly = true)
-	List<PetType> findPetTypes() {
+	public List<PetType> findPetTypes() {
 		return this.petTypes.findPetTypes();
 	}
 
 	@Transactional(readOnly = true)
-	List<Pet> findPets(int ownerId) {
+	public List<Pet> findPets(int ownerId) {
 		return findExistingOwner(ownerId).getPets();
 	}
 
 	@Transactional(readOnly = true)
-	Pet findPet(int ownerId, int petId) {
+	public Pet findPet(int ownerId, int petId) {
 		Owner owner = findExistingOwner(ownerId);
 		return findExistingPet(owner, petId);
 	}
 
 	@Transactional
-	Pet createPet(int ownerId, PetRequest request) {
+	public Pet createPet(int ownerId, PetRequest request) {
 		Owner owner = findExistingOwner(ownerId);
 		PetType type = findExistingPetType(request.typeId());
 		assertPetNameAvailable(owner, request.name(), null);
@@ -96,7 +102,7 @@ class RestOwnerService {
 	}
 
 	@Transactional
-	Pet updatePet(int ownerId, int petId, PetRequest request) {
+	public Pet updatePet(int ownerId, int petId, PetRequest request) {
 		Owner owner = findExistingOwner(ownerId);
 		Pet pet = findExistingPet(owner, petId);
 		PetType type = findExistingPetType(request.typeId());
@@ -108,18 +114,18 @@ class RestOwnerService {
 	}
 
 	@Transactional(readOnly = true)
-	List<Visit> findVisits(int ownerId, int petId) {
+	public List<Visit> findVisits(int ownerId, int petId) {
 		return List.copyOf(findPet(ownerId, petId).getVisits());
 	}
 
 	@Transactional(readOnly = true)
-	Visit findVisit(int ownerId, int petId, int visitId) {
+	public Visit findVisit(int ownerId, int petId, int visitId) {
 		Pet pet = findPet(ownerId, petId);
 		return findExistingVisit(pet, visitId);
 	}
 
 	@Transactional
-	Visit createVisit(int ownerId, int petId, VisitRequest request) {
+	public Visit createVisit(int ownerId, int petId, VisitRequest request) {
 		Owner owner = findExistingOwner(ownerId);
 		Pet pet = findExistingPet(owner, petId);
 

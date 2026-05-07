@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.samples.petclinic.owner.rest;
+package org.springframework.samples.petclinic.owner.rest.controllers;
 
 import java.net.URI;
 import java.util.List;
@@ -24,6 +24,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.samples.petclinic.owner.Owner;
 import org.springframework.samples.petclinic.owner.Pet;
 import org.springframework.samples.petclinic.owner.Visit;
+import org.springframework.samples.petclinic.owner.rest.mappers.RestOwnerMapper;
+import org.springframework.samples.petclinic.owner.rest.requests.OwnerRequest;
+import org.springframework.samples.petclinic.owner.rest.requests.PetRequest;
+import org.springframework.samples.petclinic.owner.rest.requests.VisitRequest;
+import org.springframework.samples.petclinic.owner.rest.responses.OwnerResponse;
+import org.springframework.samples.petclinic.owner.rest.responses.OwnerSummaryResponse;
+import org.springframework.samples.petclinic.owner.rest.responses.PageResponse;
+import org.springframework.samples.petclinic.owner.rest.responses.PetResponse;
+import org.springframework.samples.petclinic.owner.rest.responses.PetTypeResponse;
+import org.springframework.samples.petclinic.owner.rest.responses.VisitResponse;
+import org.springframework.samples.petclinic.owner.rest.services.RestOwnerService;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,7 +53,7 @@ import jakarta.validation.constraints.Min;
 @RestController
 @RequestMapping("/api/v1")
 @Validated
-class OwnerRestController {
+public class OwnerRestController {
 
 	private final RestOwnerService owners;
 

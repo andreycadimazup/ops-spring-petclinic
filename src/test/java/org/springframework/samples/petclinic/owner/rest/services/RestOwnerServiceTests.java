@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.samples.petclinic.owner.rest;
+package org.springframework.samples.petclinic.owner.rest.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,6 +24,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.samples.petclinic.owner.Owner;
 import org.springframework.samples.petclinic.owner.Pet;
+import org.springframework.samples.petclinic.owner.rest.requests.OwnerRequest;
+import org.springframework.samples.petclinic.owner.rest.requests.PetRequest;
+import org.springframework.samples.petclinic.owner.rest.requests.VisitRequest;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest(properties = "spring.docker.compose.enabled=false")

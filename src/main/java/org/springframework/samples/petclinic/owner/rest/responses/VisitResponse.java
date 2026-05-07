@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.samples.petclinic.owner.rest;
+package org.springframework.samples.petclinic.owner.rest.responses;
 
-public record OwnerSummaryResponse(Integer id, String firstName, String lastName, String address, String city,
-		String telephone) {
+import java.time.LocalDate;
+
+public record VisitResponse(Integer id, Integer petId, LocalDate date, String description) {
 
 }

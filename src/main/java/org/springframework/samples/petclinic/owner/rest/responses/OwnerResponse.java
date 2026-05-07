@@ -13,8 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.samples.petclinic.owner.rest;
+package org.springframework.samples.petclinic.owner.rest.responses;
 
-public record PetTypeResponse(Integer id, String name) {
+import java.util.List;
+
+public record OwnerResponse(Integer id, String firstName, String lastName, String address, String city,
+		String telephone, List<PetResponse> pets) {
 
 }

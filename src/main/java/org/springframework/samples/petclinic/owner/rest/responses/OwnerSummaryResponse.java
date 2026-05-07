@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.samples.petclinic.owner.rest;
+package org.springframework.samples.petclinic.owner.rest.responses;
 
-import java.util.List;
-
-public record PageResponse<T>(List<T> content, int page, int size, long totalElements, int totalPages) {
+public record OwnerSummaryResponse(Integer id, String firstName, String lastName, String address, String city,
+		String telephone) {
 
 }

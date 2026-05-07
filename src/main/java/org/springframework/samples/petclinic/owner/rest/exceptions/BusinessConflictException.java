@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.samples.petclinic.owner.rest;
+package org.springframework.samples.petclinic.owner.rest.exceptions;
 
-class ResourceNotFoundException extends RuntimeException {
+public class BusinessConflictException extends RuntimeException {
 
-	ResourceNotFoundException(String message) {
+	public BusinessConflictException(String message) {
 		super(message);
 	}
 

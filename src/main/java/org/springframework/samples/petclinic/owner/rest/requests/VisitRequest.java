@@ -13,17 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.samples.petclinic.owner.rest;
+package org.springframework.samples.petclinic.owner.rest.requests;
 
 import java.time.LocalDate;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Null;
-import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 
-public record PetRequest(@Null Integer id, @Null Integer ownerId, @Null Object visits,
-		@NotBlank @Size(max = 30) String name, @NotNull @PastOrPresent LocalDate birthDate, @NotNull Integer typeId) {
+public record VisitRequest(@Null Integer id, LocalDate date, @NotBlank @Size(max = 255) String description) {
 
 }
