@@ -35,15 +35,23 @@ import java.util.Collection;
  * @author Sam Brannen
  * @author Michael Isvy
  */
-public interface VetRepository extends Repository<Vet, Integer> {
+public interface VetRepository extends Repository<Vet, Integer>, VetRepositoryCustom {
 
 	/**
 	 * Retrieve all <code>Vet</code>s from the data store.
 	 * @return a <code>Collection</code> of <code>Vet</code>s
 	 */
 	@Transactional(readOnly = true)
-	@Cacheable("vets")
+	@Cacheable(cacheNames = "vets", key = "'all'")
 	Collection<Vet> findAll() throws DataAccessException;
+
+	/**
+	 * Retrieve all <code>Vet</code>s with their specialties.
+	 * @return a <code>Collection</code> of <code>Vet</code>s
+	 */
+	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = "vets", key = "'allWithSpecialties'")
+	Collection<Vet> findAllWithSpecialties() throws DataAccessException;
 
 	/**
 	 * Retrieve all <code>Vet</code>s from data store in Pages
@@ -52,7 +60,17 @@ public interface VetRepository extends Repository<Vet, Integer> {
 	 * @throws DataAccessException
 	 */
 	@Transactional(readOnly = true)
-	@Cacheable("vets")
+	@Cacheable(cacheNames = "vets", key = "'page-' + #pageable")
 	Page<Vet> findAll(Pageable pageable) throws DataAccessException;
+
+	/**
+	 * Retrieve all <code>Vet</code>s from data store in Pages with their specialties.
+	 * @param pageable
+	 * @return
+	 * @throws DataAccessException
+	 */
+	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = "vets", key = "'pageWithSpecialties-' + #pageable")
+	Page<Vet> findAllWithSpecialties(Pageable pageable) throws DataAccessException;
 
 }

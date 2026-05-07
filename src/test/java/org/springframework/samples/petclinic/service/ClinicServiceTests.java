@@ -22,12 +22,19 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Optional;
 
+import jakarta.persistence.EntityManagerFactory;
+
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase.Replace;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.samples.petclinic.owner.Owner;
 import org.springframework.samples.petclinic.owner.OwnerRepository;
@@ -67,7 +74,7 @@ import org.springframework.transaction.annotation.Transactional;
  * @author Michael Isvy
  * @author Dave Syer
  */
-@DataJpaTest
+@DataJpaTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
 // Ensure that if the mysql profile is active we connect to the real database:
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 // @TestPropertySource("/application-postgres.properties")
@@ -81,6 +88,12 @@ class ClinicServiceTests {
 
 	@Autowired
 	protected VetRepository vets;
+
+	@Autowired
+	private EntityManagerFactory entityManagerFactory;
+
+	@Autowired(required = false)
+	private CacheManager cacheManager;
 
 	private final Pageable pageable = Pageable.unpaged();
 
@@ -203,13 +216,62 @@ class ClinicServiceTests {
 
 	@Test
 	void shouldFindVets() {
-		Collection<Vet> vets = this.vets.findAll();
+		Collection<Vet> vets = this.vets.findAllWithSpecialties();
 
 		Vet vet = EntityUtils.getById(vets, Vet.class, 3);
 		assertThat(vet.getLastName()).isEqualTo("Douglas");
 		assertThat(vet.getNrOfSpecialties()).isEqualTo(2);
 		assertThat(vet.getSpecialties().get(0).getName()).isEqualTo("dentistry");
 		assertThat(vet.getSpecialties().get(1).getName()).isEqualTo("surgery");
+	}
+
+	@Test
+	void shouldFindAllVetsWithSpecialtiesWithoutNPlusOneQueries() {
+		clearVetCache();
+		Statistics statistics = statistics();
+		statistics.clear();
+
+		Collection<Vet> vets = this.vets.findAllWithSpecialties();
+		vets.forEach(vet -> assertThat(vet.getSpecialties()).isNotNull());
+
+		assertThat(statistics.getPrepareStatementCount()).isEqualTo(1);
+	}
+
+	@Test
+	void shouldFindPagedVetsWithSpecialtiesWithoutNPlusOneQueries() {
+		long statementsForTwoVets = countStatementsForPagedVets(PageRequest.of(0, 2));
+		clearVetCache();
+		statistics().clear();
+
+		Page<Vet> vets = this.vets.findAllWithSpecialties(PageRequest.of(0, 5));
+		vets.forEach(vet -> assertThat(vet.getSpecialties()).isNotNull());
+
+		assertThat(vets.getTotalElements()).isEqualTo(6);
+		assertThat(vets.getTotalPages()).isEqualTo(2);
+		assertThat(vets.getContent()).hasSize(5);
+		assertThat(statistics().getPrepareStatementCount()).isEqualTo(statementsForTwoVets).isEqualTo(3);
+	}
+
+	private Statistics statistics() {
+		return this.entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+	}
+
+	private long countStatementsForPagedVets(Pageable pageable) {
+		clearVetCache();
+		Statistics statistics = statistics();
+		statistics.clear();
+		this.vets.findAllWithSpecialties(pageable).forEach(vet -> assertThat(vet.getSpecialties()).isNotNull());
+		return statistics.getPrepareStatementCount();
+	}
+
+	private void clearVetCache() {
+		if (this.cacheManager == null) {
+			return;
+		}
+		Cache cache = this.cacheManager.getCache("vets");
+		if (cache != null) {
+			cache.clear();
+		}
 	}
 
 	@Test

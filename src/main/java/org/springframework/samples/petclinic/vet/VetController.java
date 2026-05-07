@@ -63,7 +63,7 @@ class VetController {
 	private Page<Vet> findPaginated(int page) {
 		int pageSize = 5;
 		Pageable pageable = PageRequest.of(page - 1, pageSize);
-		return vetRepository.findAll(pageable);
+		return vetRepository.findAllWithSpecialties(pageable);
 	}
 
 	@GetMapping({ "/vets" })
@@ -71,7 +71,7 @@ class VetController {
 		// Here we are returning an object of type 'Vets' rather than a collection of Vet
 		// objects so it is simpler for JSon/Object mapping
 		Vets vets = new Vets();
-		vets.getVetList().addAll(this.vetRepository.findAll());
+		vets.getVetList().addAll(this.vetRepository.findAllWithSpecialties());
 		return vets;
 	}
 

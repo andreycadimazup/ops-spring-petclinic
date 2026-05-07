@@ -73,8 +73,8 @@ class VetControllerTests {
 
 	@BeforeEach
 	void setup() {
-		given(this.vets.findAll()).willReturn(Lists.newArrayList(james(), helen()));
-		given(this.vets.findAll(any(Pageable.class)))
+		given(this.vets.findAllWithSpecialties()).willReturn(Lists.newArrayList(james(), helen()));
+		given(this.vets.findAllWithSpecialties(any(Pageable.class)))
 			.willReturn(new PageImpl<Vet>(Lists.newArrayList(james(), helen())));
 
 	}
