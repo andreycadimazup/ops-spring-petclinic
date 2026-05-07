@@ -52,8 +52,11 @@ class OwnerController {
 
 	private final OwnerRepository owners;
 
-	public OwnerController(OwnerRepository owners) {
+	private final PetTypeRepository petTypes;
+
+	public OwnerController(OwnerRepository owners, PetTypeRepository petTypes) {
 		this.owners = owners;
+		this.petTypes = petTypes;
 	}
 
 	@InitBinder
@@ -87,50 +90,52 @@ class OwnerController {
 	}
 
 	@GetMapping("/owners/find")
-	public String initFindForm() {
+	public String initFindForm(@ModelAttribute("ownerSearch") OwnerSearchCriteria ownerSearch, Model model) {
+		addSearchModel(model, ownerSearch);
 		return "owners/findOwners";
 	}
 
 	@GetMapping("/owners")
-	public String processFindForm(@RequestParam(defaultValue = "1") int page, Owner owner, BindingResult result,
-			Model model) {
-		// allow parameterless GET request for /owners to return all records
-		String lastName = owner.getLastName();
-		if (lastName == null) {
-			lastName = ""; // empty string signifies broadest possible search
-		}
-
-		// find owners by last name
-		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, lastName);
-		if (ownersResults.isEmpty()) {
-			// no owners found
-			result.rejectValue("lastName", "notFound", "not found");
-			return "owners/findOwners";
-		}
-
-		if (ownersResults.getTotalElements() == 1) {
-			// 1 owner found
-			owner = ownersResults.iterator().next();
-			return "redirect:/owners/" + owner.getId();
-		}
-
-		// multiple owners found
-		return addPaginationModel(page, model, ownersResults);
+	public String processFindForm(@RequestParam(defaultValue = "1") int page,
+			@ModelAttribute("ownerSearch") OwnerSearchCriteria ownerSearch, Model model) {
+		Page<Owner> ownersResults = findPaginatedForOwners(page, ownerSearch);
+		return addPaginationModel(page, model, ownersResults, ownerSearch);
 	}
 
-	private String addPaginationModel(int page, Model model, Page<Owner> paginated) {
+	private String addPaginationModel(int page, Model model, Page<Owner> paginated, OwnerSearchCriteria ownerSearch) {
 		List<Owner> listOwners = paginated.getContent();
 		model.addAttribute("currentPage", page);
 		model.addAttribute("totalPages", paginated.getTotalPages());
 		model.addAttribute("totalItems", paginated.getTotalElements());
 		model.addAttribute("listOwners", listOwners);
+		addSearchModel(model, ownerSearch);
 		return "owners/ownersList";
 	}
 
-	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastname) {
+	private void addSearchModel(Model model, OwnerSearchCriteria ownerSearch) {
+		List<PetType> petTypes = this.petTypes.findPetTypes();
+		model.addAttribute("ownerSearch", ownerSearch);
+		model.addAttribute("petTypes", petTypes);
+		model.addAttribute("hasActiveFilters", ownerSearch.hasFilters());
+		model.addAttribute("activePetTypeLabel", findPetTypeLabel(petTypes, ownerSearch.getPetTypeId()));
+	}
+
+	private String findPetTypeLabel(List<PetType> petTypes, Integer petTypeId) {
+		if (petTypeId == null) {
+			return null;
+		}
+		return petTypes.stream()
+			.filter(petType -> petTypeId.equals(petType.getId()))
+			.map(PetType::getName)
+			.findFirst()
+			.orElse(petTypeId.toString());
+	}
+
+	private Page<Owner> findPaginatedForOwners(int page, OwnerSearchCriteria ownerSearch) {
 		int pageSize = 5;
 		Pageable pageable = PageRequest.of(page - 1, pageSize);
 		return owners.findByLastNameStartingWithWithPets(lastname, pageable);
+
 	}
 
 	@GetMapping("/owners/{ownerId}/edit")

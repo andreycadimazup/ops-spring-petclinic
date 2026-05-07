@@ -32,6 +32,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+
 /**
  * Repository class for <code>Owner</code> domain objects. All method names are compliant
  * with Spring Data naming conventions so this interface can easily be extended for Spring
@@ -54,6 +55,26 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 	 * found)
 	 */
 	Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
+
+	@Query(value = """
+			select distinct owner
+			from Owner owner
+			left join owner.pets pet
+			where (:lastName is null or lower(owner.lastName) like lower(concat(:lastName, '%')))
+			  and (:city is null or lower(owner.city) like lower(concat(:city, '%')))
+			  and (:telephone is null or owner.telephone like concat(:telephone, '%'))
+			  and (:petTypeId is null or pet.type.id = :petTypeId)
+			""", countQuery = """
+			select count(distinct owner)
+			from Owner owner
+			left join owner.pets pet
+			where (:lastName is null or lower(owner.lastName) like lower(concat(:lastName, '%')))
+			  and (:city is null or lower(owner.city) like lower(concat(:city, '%')))
+			  and (:telephone is null or owner.telephone like concat(:telephone, '%'))
+			  and (:petTypeId is null or pet.type.id = :petTypeId)
+			""")
+	Page<Owner> findByCriteria(@Param("lastName") String lastName, @Param("city") String city,
+			@Param("telephone") String telephone, @Param("petTypeId") Integer petTypeId, Pageable pageable);
 
 	default Page<Owner> findByLastNameStartingWithWithPets(String lastName, Pageable pageable) {
 		Page<Integer> ownerIds = findIdsByLastNameStartingWith(lastName, pageable);
